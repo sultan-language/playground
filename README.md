@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="https://raw.githubusercontent.com/sultan-language/sultanc-vscode/main/icons/sultanc-logo.svg" alt="SultanC" width="100">
+
 # SultanC Playground
 
 Write, check and run [SultanC](https://github.com/sultan-language/sultanc) in your browser, in Arabic or in English.
