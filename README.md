@@ -1,7 +1,5 @@
 <div align="center">
 
-<img src="docs/images/playground-en.png" alt="SultanC Playground: a program compiled and run in the browser, with the terminal showing the compiler command, the build and the program output" width="880">
-
 # SultanC Playground
 
 Write, check and run [SultanC](https://github.com/sultan-language/sultanc) in your browser, in Arabic or in English.
@@ -26,19 +24,11 @@ Programs can be written with Arabic or English keywords, and the compiler can ex
 
 **Understand errors.** Diagnostics appear in the terminal as the compiler prints them, with the file, line and column, and the offending code marked. They are also underlined in the editor, and listed under **Problems**, where you can jump to each one, read the compiler's longer explanation, or apply a fix the compiler suggests.
 
-<div align="center">
-<img src="docs/images/playground-ar-diagnostics.png" alt="An Arabic program with a type error: the terminal shows the diagnostic in Arabic and the editor underlines the mistake" width="880">
-</div>
-
 **Work in Arabic or English.** The **Code** switch rewrites keywords, built-in types and standard-library names in the other language and leaves your own names, strings and comments untouched. The **Messages** switch changes the interface and the compiler's diagnostics. Arabic names follow the compiler's own rules, so spellings the compiler treats as the same name (with or without tatweel, أ / إ / آ or ا) are treated the same way here.
 
 **Share.** **Share** copies a link that contains your program, compressed into the address itself. Opening the link restores the code, its language, the message language and the mode. Nothing is uploaded or stored.
 
 **Feel at home.** Your work is kept in the browser between visits. The editor and terminal can be resized, there are light and dark themes, and `?` lists the keyboard shortcuts. Adding `?embed` to the address gives a compact version for documentation pages.
-
-<div align="center">
-<img src="docs/images/playground-light.png" alt="The playground in the light theme, with an Arabic program and its output" width="880">
-</div>
 
 ### Limits
 
@@ -104,7 +94,6 @@ npm run test:surface               # every example still compiles after the Arab
 | `scripts/` | Asset generation, release download, build, local server and tests |
 | `compiler/release.json` | The SultanC release in use |
 | `integration/sultanc/` | The release workflow that lives in the compiler repository |
-| `docs/images/` | Screenshots used in this README |
 
 Generated files are never committed. `compiler/assets/` and `compiler/cache/` hold the downloaded compiler; `build/` holds the built site and test output and can be deleted at any time with `npm run clean`.
 
