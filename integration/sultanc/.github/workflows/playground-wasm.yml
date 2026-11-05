@@ -41,6 +41,16 @@ jobs:
           ref: ${{ inputs.tag || github.event.release.tag_name }}
           persist-credentials: false
 
+      # The smoke test comes from the branch that holds this workflow, so a
+      # release tagged before the workflow existed can still be built.
+      - name: Checkout smoke test
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: .playground-harness
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+
       - name: Build Stage2 from the wasm seed
         shell: bash
         run: ./build.sh --bootstrap=wasm
@@ -57,7 +67,7 @@ jobs:
 
       - name: Smoke test under WASI
         shell: bash
-        run: node .github/scripts/playground-wasm-smoke.mjs "build/playground/$ASSET"
+        run: node .playground-harness/.github/scripts/playground-wasm-smoke.mjs "build/playground/$ASSET"
 
       - name: Attach to release
         shell: bash

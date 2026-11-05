@@ -3,8 +3,9 @@
 # - Pull requests: build and test only.
 # - Push to main, or a manual / compiler-release dispatch: build, test, deploy.
 #
-# The compiler comes from a SultanC release (compiler/release.json, or the `tag`
-# input), downloaded and checked by scripts/fetch-compiler.mjs.
+# The compiler comes from the committed compiler/assets/, or from a SultanC
+# release (the `tag` input, or compiler/release.json when no assets are
+# committed), downloaded and checked by scripts/fetch-compiler.mjs.
 name: Deploy
 
 on:
@@ -40,11 +41,19 @@ jobs:
 
       - run: npm ci
 
-      - name: Fetch compiler from release
+      # Uses the committed compiler/assets/ when present. A manual run with a
+      # tag, or a checkout without assets, downloads the compiler from that
+      # SultanC release instead.
+      - name: Compiler assets
         env:
           GITHUB_TOKEN: ${{ github.token }}
           SULTANC_RELEASE: ${{ inputs.tag }}
-        run: npm run fetch-compiler
+        run: |
+          if [ -n "$SULTANC_RELEASE" ] || [ ! -f compiler/assets/sultanc.wasm ]; then
+            npm run fetch-compiler
+          else
+            echo "Using committed compiler/assets/ ($(node -p "require('./compiler/assets/version.json').compiler"))"
+          fi
 
       - run: npm run build
 
