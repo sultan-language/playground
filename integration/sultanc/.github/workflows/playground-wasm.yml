@@ -1,0 +1,83 @@
+# Builds the wasm32-wasi compiler used by the browser playground
+# (sultan-language/playground) and attaches it to the release.
+#
+# Assets added to the release:
+#   sultanc-wasm32-wasi.wasm         the compiler (Native backend only)
+#   sultanc-wasm32-wasi.wasm.sha256  its SHA-256, checked by the playground
+#
+# The bootstrap uses the wasm seed (bootstrap-wasm/), so the runner needs only
+# a C compiler and CMake, not LLVM.
+name: Playground Compiler
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to build and attach the compiler to.
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: playground-wasm-${{ inputs.tag || github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build wasm32-wasi compiler
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      TAG: ${{ inputs.tag || github.event.release.tag_name }}
+      ASSET: sultanc-wasm32-wasi.wasm
+    steps:
+      - name: Checkout release
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ inputs.tag || github.event.release.tag_name }}
+          persist-credentials: false
+
+      - name: Build Stage2 from the wasm seed
+        shell: bash
+        run: ./build.sh --bootstrap=wasm
+
+      - name: Build the compiler for wasm32-wasi
+        shell: bash
+        run: |
+          mkdir -p build/playground
+          build/sultanc compiler/main.sn --backend=native --target=wasm32-wasi --emit=exe \
+            --module-source=compiler.backend.provider.llvm.llvm_codegen=compiler/backend/provider/llvm/unavailable.sn \
+            -o "build/playground/$ASSET"
+          (cd build/playground && sha256sum "$ASSET" > "$ASSET.sha256")
+          ls -l build/playground
+
+      - name: Smoke test under WASI
+        shell: bash
+        run: node .github/scripts/playground-wasm-smoke.mjs "build/playground/$ASSET"
+
+      - name: Attach to release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "$TAG" "build/playground/$ASSET" "build/playground/$ASSET.sha256" \
+            --repo "$GITHUB_REPOSITORY" --clobber
+
+      # Optional: redeploy the playground right away. Needs a fine-grained token
+      # with "Actions: write" on sultan-language/playground, saved as the
+      # PLAYGROUND_DISPATCH_TOKEN secret. Without it this step is skipped and
+      # the playground picks the release up on its next deploy.
+      - name: Redeploy playground
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.PLAYGROUND_DISPATCH_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "PLAYGROUND_DISPATCH_TOKEN not set; skipping."
+            exit 0
+          fi
+          gh workflow run deploy.yml --repo sultan-language/playground --ref main -f tag="$TAG"

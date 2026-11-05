@@ -1,0 +1,78 @@
+# Builds, tests and deploys the playground to GitHub Pages.
+#
+# - Pull requests: build and test only.
+# - Push to main, or a manual / compiler-release dispatch: build, test, deploy.
+#
+# The compiler comes from a SultanC release (compiler/release.json, or the `tag`
+# input), downloaded and checked by scripts/fetch-compiler.mjs.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: SultanC release tag to use (empty = compiler/release.json).
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-${{ github.event_name == 'pull_request' && github.event.pull_request.number || 'pages' }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Fetch compiler from release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          SULTANC_RELEASE: ${{ inputs.tag }}
+        run: npm run fetch-compiler
+
+      - run: npm run build
+
+      - name: Language switch test (every example, both directions)
+        run: npm run test:surface
+
+      - name: Browser test
+        run: |
+          npx playwright install --with-deps chromium
+          npm test
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
