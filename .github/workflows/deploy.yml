@@ -3,9 +3,10 @@
 # - Pull requests: build and test only.
 # - Push to main, or a manual / compiler-release dispatch: build, test, deploy.
 #
-# The compiler comes from the committed compiler/assets/, or from a SultanC
-# release (the `tag` input, or compiler/release.json when no assets are
-# committed), downloaded and checked by scripts/fetch-compiler.mjs.
+# The compiler is the wasm seed of the SultanC repository
+# (bootstrap-wasm/seed/sultanc.wasm.zst) at the ref in compiler/source.json, or
+# the `ref` input of a manual run. scripts/fetch-compiler.mjs takes the
+# compiler, the standard library and the examples from that one commit.
 name: Deploy
 
 on:
@@ -14,8 +15,8 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
-      tag:
-        description: SultanC release tag to use (empty = compiler/release.json).
+      ref:
+        description: SultanC branch, tag or commit (empty = compiler/source.json).
         required: false
         type: string
 
@@ -41,19 +42,10 @@ jobs:
 
       - run: npm ci
 
-      # Uses the committed compiler/assets/ when present. A manual run with a
-      # tag, or a checkout without assets, downloads the compiler from that
-      # SultanC release instead.
-      - name: Compiler assets
+      - name: Compiler from the SultanC repository
         env:
-          GITHUB_TOKEN: ${{ github.token }}
-          SULTANC_RELEASE: ${{ inputs.tag }}
-        run: |
-          if [ -n "$SULTANC_RELEASE" ] || [ ! -f compiler/assets/sultanc.wasm ]; then
-            npm run fetch-compiler
-          else
-            echo "Using committed compiler/assets/ ($(node -p "require('./compiler/assets/version.json').compiler"))"
-          fi
+          SULTANC_REF: ${{ inputs.ref }}
+        run: npm run fetch-compiler
 
       - run: npm run build
 

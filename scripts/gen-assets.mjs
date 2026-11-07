@@ -48,12 +48,19 @@ const index = Object.keys(examples)
     const text = examples[p];
     const first = text.split("\n")[0];
     const summary = first.startsWith("//") ? first.replace(/^\/\/\s?/, "") : "";
-    const hasEntry = /^\s*(عرف|def)\s+(القلعة|main)\s*\(/m.test(text);
+    const hasEntry = /^\s*(عرف|def)\s+(الرئيسية|main)\s*\(/m.test(text);
     return { path: p, lang, id: rest.join("/"), summary, entry: hasEntry };
   });
 await writeFile(path.join(out, "examples.json"), JSON.stringify({ files: examples, index }));
 
 // 4. Surface map: keywords, built-in types, contextual types, std aliases, entry point.
+// The compiler's canonical registries (the generated .sn and bootstrap files
+// are produced from these).
+const REGISTRY = "tools/generate/registry";
+for (const f of ["token_registry.def", "type_registry.def", "identifier_policy_registry.def"]) {
+  try { await stat(path.join(checkout, REGISTRY, f)); }
+  catch { console.error(`gen-assets: ${REGISTRY}/${f} is missing from the SultanC checkout; the playground reads the keyword, type and identifier registries from there.`); process.exit(1); }
+}
 const tokenDef = await readFile(path.join(checkout, "tools/generate/registry/token_registry.def"), "utf8");
 const typeDef = await readFile(path.join(checkout, "tools/generate/registry/type_registry.def"), "utf8");
 const pairs = []; // [arabic, english]
@@ -62,11 +69,23 @@ for (const m of tokenDef.matchAll(/SULTANC__KEYWORD__\(\w+,\s*"([^"]+)",\s*"([^"
 for (const m of tokenDef.matchAll(/SULTANC__BOOL_KEYWORD__\("([^"]+)",\s*"([^"]+)"/g)) { pairs.push([m[2], m[1]]); literals.push(m[2], m[1]); }
 for (const m of typeDef.matchAll(/SULTANC__TYPE_(?:BUILTIN|MACHINE)__\([^"]*"([^"]+)",\s*"([^"]+)"\)/g)) { pairs.push([m[1], m[2]]); types.push(m[1], m[2]); }
 for (const m of typeDef.matchAll(/SULTANC__TYPE_CONTEXTUAL__\(\w+,\s*\w+,\s*"([^"]+)",\s*"([^"]+)"/g)) { pairs.push([m[1], m[2]]); types.push(m[1], m[2]); }
-pairs.push(["القلعة", "main"]);
+pairs.push(["الرئيسية", "main"]);
 // Built-in constructors of the contextual result/option types
 // (matched by name in compiler/frontend/types/type_semantic_shape_queries.sn).
 pairs.push(["نتيجة.نجح", "result.ok"], ["نتيجة.خطأ", "result.err"]);
-pairs.push(["اختيار.بعض", "option.some"], ["اختيار.لا_شيء", "option.none"]);
+pairs.push(["اختياري.موجود", "option.some"], ["اختياري.لا_شيء", "option.none"]);
+// Deprecated Arabic spellings (kept for one release by the compiler): they
+// convert to English, and English converts back to the canonical spelling,
+// because the canonical pairs above are registered first.
+const english = new Map(pairs.map(([ar, en]) => [ar, en]));
+for (const m of tokenDef.matchAll(/SULTANC__KEYWORD_DEPRECATED__\(\w+,\s*"([^"]+)",\s*"([^"]+)"\)/g)) {
+  if (english.has(m[2])) { pairs.push([m[1], english.get(m[2])]); if (types.includes(m[2])) types.push(m[1]); }
+}
+for (const m of typeDef.matchAll(/SULTANC__TYPE_CONTEXTUAL_DEPRECATED__\((\w+),\s*"([^"]+)"\)/g)) {
+  const canonical = typeDef.match(new RegExp(`SULTANC__TYPE_CONTEXTUAL__\\(${m[1]},\\s*\\w+,\\s*"([^"]+)",\\s*"([^"]+)"`));
+  if (canonical) { pairs.push([m[2], canonical[2]]); types.push(m[2]); }
+}
+pairs.push(["اختيار.بعض", "option.some"], ["اختياري.بعض", "option.some"], ["اختيار.لا_شيء", "option.none"]);
 // Built-in primitives (compiler/frontend/names/primitive_registry.sn).
 const prim = await readFile(path.join(checkout, "compiler/frontend/names/primitive_registry.sn"), "utf8");
 for (const m of prim.matchAll(/سجل_بدائيا_واحدا\([^«]*«([^»]+)»,\s*«([^»]+)»/g)) if (m[1] !== m[2]) pairs.push([m[1], m[2]]);

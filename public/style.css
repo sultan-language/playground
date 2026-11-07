@@ -76,6 +76,9 @@ body { background: var(--bg); color: var(--fg); font-family: var(--ui-font); fon
 .mark { width: 26px; height: 26px; fill: none; stroke: var(--accent); stroke-width: 2.2; }
 .mark circle { fill: var(--accent); stroke: none; }
 .brand-name { font-size: 16px; font-weight: 650; }
+.links { display: inline-flex; gap: 16px; }
+.links a { color: var(--muted); text-decoration: none; }
+.links a:hover { color: var(--accent-text); }
 .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-inline-start: auto; }
 .group { display: inline-flex; align-items: center; gap: 6px; }
 
@@ -241,4 +244,5 @@ body.embed .controls .field, body.embed .controls .toggle, body.embed #help, bod
   select { max-width: 100%; }
   .field .label, .toggle .label { display: none; }
   .foot .limits { display: none; }
+  .links { display: none; }
 }

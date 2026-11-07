@@ -1,0 +1,5 @@
+{
+  "repository": "sultan-language/sultanc",
+  "ref": "main",
+  "seed": "bootstrap-wasm/seed/sultanc.wasm.zst"
+}

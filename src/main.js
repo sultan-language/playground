@@ -16,6 +16,7 @@ const TEXT = {
     title: "ملعب سلطان سي",
     run: "تشغيل", build: "بناء وتنزيل", check: "فحص", share: "مشاركة", examples: "أمثلة", newFile: "ملف جديد",
     termClear: "مسح", termCopy: "نسخ",
+    linkLanguage: "سلطان سي", linkSource: "مصدر الملعب", linkIssues: "الإبلاغ عن مشكلة",
     chooseExample: "اختر مثالا", download: "تنزيل الملف", theme: "المظهر", shortcuts: "الاختصارات",
     themes: { system: "مظهر النظام", dark: "داكن", light: "فاتح" },
     helpTitle: "اختصارات لوحة المفاتيح", close: "إغلاق",
@@ -56,6 +57,7 @@ const TEXT = {
     title: "SultanC Playground",
     run: "Run", build: "Build & download", check: "Check", share: "Share", examples: "Examples", newFile: "New file",
     termClear: "Clear", termCopy: "Copy",
+    linkLanguage: "SultanC", linkSource: "Playground source", linkIssues: "Report an issue",
     chooseExample: "Choose an example", download: "Download file", theme: "Theme", shortcuts: "Shortcuts",
     themes: { system: "System theme", dark: "Dark", light: "Light" },
     helpTitle: "Keyboard shortcuts", close: "Close",
@@ -99,7 +101,7 @@ const TARGETS = [["browser", "targetBrowser"], ["interpreter", "targetInterp"], 
 const RUNS_HERE = new Set(["browser", "interpreter"]);
 
 const NEW_FILE = {
-  ar: `استورد std.io.println;\n\nعرف القلعة(): عدد {\n    دع التحية: نص = "مرحبا بالعالم";\n    اطبع_سطر(التحية);\n    أرجع 0;\n}\n`,
+  ar: `استورد std.io.println;\n\nعرف الرئيسية(): عدد {\n    دع التحية: نص = "مرحبا بالعالم";\n    اطبع_سطر(التحية);\n    أرجع 0;\n}\n`,
   en: `import std.io.println;\n\ndef main(): int {\n    let greeting: string = "Hello, world";\n    println(greeting);\n    return 0;\n}\n`,
 };
 
@@ -598,7 +600,7 @@ async function boot() {
   if (version) {
     const v = $("version");
     v.textContent = version.compiler;
-    if (/^v?\d/.test(version.compiler)) v.closest("a")?.setAttribute("href", `https://github.com/sultan-language/sultanc/releases/tag/${version.compiler}`);
+    if (version.commit) v.closest("a")?.setAttribute("href", `https://github.com/${version.repository || "sultan-language/sultanc"}/commit/${version.commit}`);
   }
 
   let shared = null;

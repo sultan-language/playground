@@ -54,23 +54,21 @@ The editor is built on CodeMirror 6. Its highlighting, the Arabic ⇄ English sw
 
 ## Compiler versions
 
-The playground always runs a published SultanC release. `compiler/release.json` names which one: `"latest"`, or a specific tag.
-
-Each SultanC release carries a ready-made `sultanc-wasm32-wasi.wasm` and its SHA-256, produced by a workflow in the compiler repository. When the playground is built, it downloads that file, checks the hash, and takes the standard library and examples from the same tag. The workflow and its smoke test are kept in [`integration/sultanc/`](integration/sultanc/) for reference.
+The playground runs the SultanC compiler's own WebAssembly seed, `bootstrap-wasm/seed/sultanc.wasm.zst` in the [compiler repository](https://github.com/sultan-language/sultanc/tree/main/bootstrap-wasm). `compiler/source.json` names the branch, tag or commit to use (`main` by default). When the playground is built, `npm run fetch-compiler` checks out that ref, decompresses the seed, and takes the standard library and examples from the same commit, so all three always match. The page footer shows the commit it was built from.
 
 ## Running it locally
 
-You need [Node.js](https://nodejs.org) 20 or later.
+You need [Node.js](https://nodejs.org) 22.15 or later (for its built-in zstd), and git.
 
 ```sh
 git clone https://github.com/sultan-language/playground.git
 cd playground
 npm ci
-npm run fetch-compiler      # download the compiler release named in compiler/release.json
+npm run fetch-compiler      # the compiler, std and examples from the SultanC repository
 npm start                   # build the site and serve it at http://localhost:8080
 ```
 
-To try a compiler you have built yourself, point the playground at your SultanC checkout instead of downloading a release:
+To build from another branch, tag or commit, pass it along: `npm run fetch-compiler -- my-branch`. To try a compiler you have built yourself, point the playground at your SultanC checkout:
 
 ```sh
 npm run assets:local -- ../sultanc
@@ -93,21 +91,14 @@ npm run test:surface               # every example still compiles after the Arab
 |---|---|
 | `public/` | The page, its stylesheet and the service worker |
 | `src/` | The application: editor and interface (`main.js`), terminal, compiler worker, language switch, highlighting |
-| `scripts/` | Asset generation, release download, build, local server and tests |
-| `compiler/release.json` | The SultanC release in use |
-| `integration/sultanc/` | The release workflow that lives in the compiler repository |
+| `scripts/` | Compiler fetch, asset generation, build, local server and tests |
+| `compiler/source.json` | The SultanC repository and ref the compiler comes from |
 
-Generated files are never committed. `compiler/assets/` and `compiler/cache/` hold the downloaded compiler; `build/` holds the built site and test output and can be deleted at any time with `npm run clean`.
+Generated files are never committed. `compiler/assets/` and `compiler/cache/` hold the fetched compiler and its checkout; `build/` holds the built site and test output and can be deleted at any time with `npm run clean`.
 
 ## Deployment
 
-The site is published to GitHub Pages by the **Deploy** workflow. Every pull request is built and tested; every push to `main` is built, tested and deployed. The workflow can also be run by hand to deploy a particular compiler release.
-
-To set it up once:
-
-1. Copy the two files from `integration/sultanc/` into the compiler repository, at the same paths, and run its **Playground Compiler** workflow for an existing release.
-2. Here, under **Settings → Pages**, set the source to **GitHub Actions**.
-3. Optionally, to redeploy the playground automatically whenever a compiler release is published, create a fine-grained token with **Actions: write** on this repository and save it in the compiler repository as `PLAYGROUND_DISPATCH_TOKEN`.
+The site is published to GitHub Pages by the **Deploy** workflow. Every pull request is built and tested; every push to `main` is built, tested and deployed. To pick up a newer compiler, run the workflow by hand (**Actions → Deploy → Run workflow**); its optional `ref` input builds from a specific SultanC branch, tag or commit.
 
 ## Contributing
 

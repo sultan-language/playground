@@ -38,7 +38,7 @@ try {
   // 2. Switch code to Arabic (unedited example loads its counterpart) and run.
   await page.click('[data-surface="ar"]');
   const code = await page.evaluate(() => window.__playground.getCode());
-  check("switch to Arabic loads counterpart", code.includes("القلعة"));
+  check("switch to Arabic loads counterpart", code.includes("الرئيسية"));
   await page.click("#run"); await waitDone();
   out = await output();
   check("run Arabic hello", out.includes("مرحبا") && out.includes("42"), JSON.stringify(out.slice(0, 80)));
@@ -88,7 +88,7 @@ try {
   check("mode switch back to Compiler restores the target list", await page.isVisible("#target-field") && (await page.inputValue("#target")) === "browser");
 
   // 3c. Arabic identifiers: highlighted as names, alef variants treated as one identity.
-  await page.evaluate(() => { const p = window.__playground; p.setSurface("ar", { convertCode: false }); p.state.path = "main.sn"; p.setCode('استورد std.io.println;\n\nعرف القلعة(): عدد {\n    دع الإسم: نص = "سلطان";\n    اطبع_سطر(الاسم);\n    ارجع 0;\n}\n'); });
+  await page.evaluate(() => { const p = window.__playground; p.setSurface("ar", { convertCode: false }); p.state.path = "main.sn"; p.setCode('استورد std.io.println;\n\nعرف الرئيسية(): عدد {\n    دع الإسم: نص = "سلطان";\n    اطبع_سطر(الاسم);\n    ارجع 0;\n}\n'); });
   await page.click("#run"); await waitDone();
   check("Arabic identifiers (alef identity) compile and run", (await output()).includes("سلطان"), await status());
 
@@ -144,7 +144,7 @@ try {
   await page.evaluate(() => { const p = window.__playground; p.setSurface("ar", { convertCode: false }); p.state.path = "examples/ar/basics/hello.sn"; p.setCode(p.state.examples.files[p.state.path]); });
   await page.click("#run"); await waitDone();
   await page.screenshot({ path: process.env.SHOT_AR || `${TEST}/screenshot-ar.png` });
-  await page.evaluate(() => window.__playground.setCode('استورد std.io.println;\n\nعرف القلعة(): عدد {\n    دع س: عدد = "نص";\n    أرجع 0;\n}\n'));
+  await page.evaluate(() => window.__playground.setCode('استورد std.io.println;\n\nعرف الرئيسية(): عدد {\n    دع س: عدد = "نص";\n    أرجع 0;\n}\n'));
   await page.click("#check"); await waitDone();
   await page.hover(".cm-lintRange-error").catch(() => {});
   await page.waitForTimeout(400);

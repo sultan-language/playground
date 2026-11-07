@@ -5,8 +5,9 @@ node_modules/
 # `npm run clean` removes it.
 build/
 
-# Compiler release download and source checkout (npm run fetch-compiler).
-# compiler/assets/ is committed for now, until SultanC releases carry the wasm.
+# Compiler assets, made by `npm run fetch-compiler` from the SultanC repository
+# (or `npm run assets:local` from a local checkout). Only source.json is committed.
+compiler/assets/
 compiler/cache/
 
 # OS and editor files
