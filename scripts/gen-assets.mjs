@@ -11,6 +11,7 @@
 import { readFile, readdir, stat, writeFile, mkdir, copyFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import path from "node:path";
+import { readRegistry } from "./registry.mjs";
 import { ASSETS } from "./paths.mjs";
 
 const [checkout, compilerWasm, label = "dev"] = process.argv.slice(2);
@@ -54,37 +55,19 @@ const index = Object.keys(examples)
 await writeFile(path.join(out, "examples.json"), JSON.stringify({ files: examples, index }));
 
 // 4. Surface map: keywords, built-in types, contextual types, std aliases, entry point.
-// The compiler's canonical registries (the generated .sn and bootstrap files
-// are produced from these).
-const REGISTRY = "tools/generate/registry";
-for (const f of ["token_registry.def", "type_registry.def", "identifier_policy_registry.def"]) {
-  try { await stat(path.join(checkout, REGISTRY, f)); }
-  catch { console.error(`gen-assets: ${REGISTRY}/${f} is missing from the SultanC checkout; the playground reads the keyword, type and identifier registries from there.`); process.exit(1); }
-}
-const tokenDef = await readFile(path.join(checkout, "tools/generate/registry/token_registry.def"), "utf8");
-const typeDef = await readFile(path.join(checkout, "tools/generate/registry/type_registry.def"), "utf8");
-const pairs = []; // [arabic, english]
-const types = [], literals = []; // for highlighting; taken from the registries so renames follow
-for (const m of tokenDef.matchAll(/SULTANC__KEYWORD__\(\w+,\s*"([^"]+)",\s*"([^"]+)"\)/g)) pairs.push([m[2], m[1]]);
-for (const m of tokenDef.matchAll(/SULTANC__BOOL_KEYWORD__\("([^"]+)",\s*"([^"]+)"/g)) { pairs.push([m[2], m[1]]); literals.push(m[2], m[1]); }
-for (const m of typeDef.matchAll(/SULTANC__TYPE_(?:BUILTIN|MACHINE)__\([^"]*"([^"]+)",\s*"([^"]+)"\)/g)) { pairs.push([m[1], m[2]]); types.push(m[1], m[2]); }
-for (const m of typeDef.matchAll(/SULTANC__TYPE_CONTEXTUAL__\(\w+,\s*\w+,\s*"([^"]+)",\s*"([^"]+)"/g)) { pairs.push([m[1], m[2]]); types.push(m[1], m[2]); }
+// Keywords, types, literals and identifier rules from the compiler's sources.
+const registry = await readRegistry(checkout);
+const pairs = [...registry.pairs]; // [arabic, english]; canonical spellings first
+const { types, literals } = registry;
 pairs.push(["الرئيسية", "main"]);
 // Built-in constructors of the contextual result/option types
 // (matched by name in compiler/frontend/types/type_semantic_shape_queries.sn).
 pairs.push(["نتيجة.نجح", "result.ok"], ["نتيجة.خطأ", "result.err"]);
 pairs.push(["اختياري.موجود", "option.some"], ["اختياري.لا_شيء", "option.none"]);
-// Deprecated Arabic spellings (kept for one release by the compiler): they
+// Deprecated Arabic spellings (accepted by the compiler for one release): they
 // convert to English, and English converts back to the canonical spelling,
 // because the canonical pairs above are registered first.
-const english = new Map(pairs.map(([ar, en]) => [ar, en]));
-for (const m of tokenDef.matchAll(/SULTANC__KEYWORD_DEPRECATED__\(\w+,\s*"([^"]+)",\s*"([^"]+)"\)/g)) {
-  if (english.has(m[2])) { pairs.push([m[1], english.get(m[2])]); if (types.includes(m[2])) types.push(m[1]); }
-}
-for (const m of typeDef.matchAll(/SULTANC__TYPE_CONTEXTUAL_DEPRECATED__\((\w+),\s*"([^"]+)"\)/g)) {
-  const canonical = typeDef.match(new RegExp(`SULTANC__TYPE_CONTEXTUAL__\\(${m[1]},\\s*\\w+,\\s*"([^"]+)",\\s*"([^"]+)"`));
-  if (canonical) { pairs.push([m[2], canonical[2]]); types.push(m[2]); }
-}
+pairs.push(...registry.deprecatedPairs);
 pairs.push(["اختيار.بعض", "option.some"], ["اختياري.بعض", "option.some"], ["اختيار.لا_شيء", "option.none"]);
 // Built-in primitives (compiler/frontend/names/primitive_registry.sn).
 const prim = await readFile(path.join(checkout, "compiler/frontend/names/primitive_registry.sn"), "utf8");
@@ -101,17 +84,8 @@ for (const [file, text] of Object.entries(std)) {
     aliasPairs.push([m[2], m[1], module]);
   }
 }
-// Identifier policy (which scalars may start/continue a name, which are ignored
-// or normalized for identity), so the editor reads names exactly as the lexer.
-const policyDef = await readFile(path.join(checkout, "tools/generate/registry/identifier_policy_registry.def"), "utf8");
-const hex = (x) => parseInt(x, 16);
-const identifier = { start: [], rest: [], ignored: [], normalized: [] };
-for (const m of policyDef.matchAll(/^SULTANC__IDENTIFIER_(START|REST)_(RANGE|SCALAR)__\(0x([0-9A-Fa-f]+)(?:,\s*0x([0-9A-Fa-f]+))?\)/gm)) {
-  identifier[m[1].toLowerCase()].push([hex(m[3]), hex(m[4] || m[3])]);
-}
-for (const m of policyDef.matchAll(/^SULTANC__IDENTIFIER_IGNORED_SCALAR__\(0x([0-9A-Fa-f]+)\)/gm)) identifier.ignored.push(hex(m[1]));
-for (const m of policyDef.matchAll(/^SULTANC__IDENTIFIER_NORMALIZED_SCALAR__\(0x([0-9A-Fa-f]+),\s*0x([0-9A-Fa-f]+)\)/gm)) identifier.normalized.push([hex(m[1]), hex(m[2])]);
-if (!identifier.start.length) throw new Error("identifier_policy_registry.def: no identifier-start entries found");
+// Identifier policy: the editor reads names exactly as the lexer does.
+const { identifier } = registry;
 const keywordList = {
   ar: [...new Set(pairs.map((p) => p[0]))],
   en: [...new Set(pairs.map((p) => p[1]))],
